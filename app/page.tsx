@@ -1,0 +1,959 @@
+"use client";
+
+/**
+ * app/page.tsx — "Digital Renaissance" · Final Clean Edition
+ *
+ * What changed from previous versions:
+ *   ✓ All HTML lives here — no Scroll html, no createRoot conflict
+ *   ✓ <main> uses overflow-x-hidden (not overflow-hidden)
+ *   ✓ Headline overflow wrappers have paddingBottom: 12px → no 'g' clipping
+ *   ✓ Available badge at bottom-right → zero nav overlap
+ *   ✓ No style2 / css / non-standard props anywhere
+ *   ✓ scrollYProgress from useScroll() passed to HeroCanvas as prop
+ *   ✓ Works cards have transparent section bg → glass orb shines through
+ */
+
+import dynamic    from "next/dynamic";
+import { useRef, useEffect, useState } from "react";
+import { Playfair_Display, Inter } from "next/font/google";
+import StarCursor from "./StarCursor";
+import {
+  motion,
+  useScroll,
+  useMotionValue,
+  useSpring,
+  useInView,
+} from "framer-motion";
+
+// ─── Fonts ────────────────────────────────────────────────────────────────────
+const playfair = Playfair_Display({
+  subsets:  ["latin"],
+  weight:   ["400", "500", "700", "900"],
+  style:    ["normal", "italic"],
+  variable: "--font-display",
+  display:  "swap",
+});
+
+const inter = Inter({
+  subsets:  ["latin"],
+  weight:   ["300", "400", "500"],
+  variable: "--font-body",
+  display:  "swap",
+});
+
+// ─── Lazy canvas — SSR off ────────────────────────────────────────────────────
+const HeroCanvas = dynamic(() => import("./HeroCanvas"), {
+  ssr:     false,
+  loading: () => null,
+});
+
+// ─── Shared constants ─────────────────────────────────────────────────────────
+const EXPO = [0.16, 1, 0.3, 1] as const;
+
+// Inline style shorthand objects — avoids repetition, no non-standard props
+const FD: React.CSSProperties = { fontFamily: "var(--font-display)" };
+const FB: React.CSSProperties = { fontFamily: "var(--font-body)" };
+
+// ─── Framer Motion variants ───────────────────────────────────────────────────
+const fadeUp = (delay = 0) => ({
+  hidden:  { opacity: 0, y: 28 },
+  visible: {
+    opacity: 1, y: 0,
+    transition: { duration: 1.05, delay, ease: EXPO },
+  },
+});
+
+const wordReveal = {
+  hidden:  { opacity: 0, y: 56, rotateX: -20 as number, filter: "blur(5px)" },
+  visible: (i: number) => ({
+    opacity: 1, y: 0, rotateX: 0, filter: "blur(0px)",
+    transition: { duration: 1.0, delay: 0.45 + i * 0.12, ease: EXPO },
+  }),
+};
+
+const ornamentReveal = {
+  hidden:  { scaleX: 0, opacity: 0 },
+  visible: {
+    scaleX: 1, opacity: 1,
+    transition: { duration: 1.25, delay: 1.55, ease: EXPO },
+  },
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FIXED BACKGROUND DECORATIONS (pointer-events-none, never block scroll)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function AuroraWash() {
+  return (
+    <div
+      aria-hidden
+      style={{ position: "fixed", inset: 0, zIndex: 1, pointerEvents: "none", overflow: "hidden" }}
+    >
+      {/* Violet — top-right */}
+      <motion.div
+        style={{
+          position: "absolute", width: "70vmax", height: "70vmax",
+          top: "-20vmax", right: "-15vmax", borderRadius: "50%", filter: "blur(80px)",
+          background: "radial-gradient(circle at 45% 45%, rgba(109,40,217,0.22) 0%, rgba(76,29,149,0.10) 45%, transparent 70%)",
+        }}
+        animate={{ x: [0,-50,30,-40,0], y: [0,60,-30,50,0], scale: [1,1.07,0.94,1.04,1] }}
+        transition={{ duration: 36, ease: "easeInOut", repeat: Infinity, repeatType: "mirror" }}
+      />
+      {/* Gold — bottom-left */}
+      <motion.div
+        style={{
+          position: "absolute", width: "60vmax", height: "60vmax",
+          bottom: "-10vmax", left: "-10vmax", borderRadius: "50%", filter: "blur(90px)",
+          background: "radial-gradient(circle at 55% 55%, rgba(180,130,20,0.20) 0%, rgba(140,95,15,0.08) 45%, transparent 70%)",
+        }}
+        animate={{ x: [0,60,-25,45,0], y: [0,-40,55,-30,0], scale: [1,1.10,0.91,1.06,1] }}
+        transition={{ duration: 44, ease: "easeInOut", repeat: Infinity, repeatType: "mirror", delay: 8 }}
+      />
+      {/* Cobalt — bottom-right */}
+      <motion.div
+        style={{
+          position: "absolute", width: "55vmax", height: "55vmax",
+          bottom: "-15vmax", right: "5vmax", borderRadius: "50%", filter: "blur(100px)",
+          background: "radial-gradient(circle at 50% 50%, rgba(15,30,100,0.22) 0%, rgba(10,20,70,0.10) 45%, transparent 70%)",
+        }}
+        animate={{ x: [0,-40,30,-50,0], y: [0,45,-55,25,0], scale: [1,0.92,1.12,0.96,1] }}
+        transition={{ duration: 50, ease: "easeInOut", repeat: Infinity, repeatType: "mirror", delay: 15 }}
+      />
+    </div>
+  );
+}
+
+function Vignette() {
+  return (
+    <div
+      aria-hidden
+      style={{
+        position: "fixed", inset: 0, zIndex: 2, pointerEvents: "none",
+        background: [
+          "radial-gradient(ellipse 110% 100% at 50% 50%, transparent 10%, rgba(5,5,8,0.80) 100%)",
+          "linear-gradient(to bottom, rgba(5,5,8,0.62) 0%, transparent 18%, transparent 68%, rgba(5,5,8,0.94) 100%)",
+        ].join(", "),
+      }}
+    />
+  );
+}
+
+function Grain() {
+  return (
+    <div
+      aria-hidden
+      style={{
+        position: "fixed", inset: 0, zIndex: 50, pointerEvents: "none",
+        backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.80' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23g)'/%3E%3C/svg%3E\")",
+        backgroundRepeat: "repeat",
+        backgroundSize: "155px",
+        opacity: 0.044,
+        mixBlendMode: "overlay" as const,
+      }}
+    />
+  );
+}
+
+function CursorGlow() {
+  const x  = useMotionValue(-600);
+  const y  = useMotionValue(-600);
+  const sx = useSpring(x, { stiffness: 55, damping: 18 });
+  const sy = useSpring(y, { stiffness: 55, damping: 18 });
+
+  useEffect(() => {
+    const fn = (e: MouseEvent) => { x.set(e.clientX); y.set(e.clientY); };
+    window.addEventListener("mousemove", fn, { passive: true });
+    return () => window.removeEventListener("mousemove", fn);
+  }, [x, y]);
+
+  return (
+    <motion.div
+      aria-hidden
+      style={{
+        position: "fixed", zIndex: 4, pointerEvents: "none",
+        width: 360, height: 360, borderRadius: "50%",
+        left: sx, top: sy,
+        translateX: "-50%", translateY: "-50%",
+        background: "radial-gradient(circle, rgba(201,168,76,0.055) 0%, transparent 65%)",
+      }}
+    />
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// NAV
+// ═══════════════════════════════════════════════════════════════════════════════
+function Nav({ fontVars }: { fontVars: string }) {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const fn = () => setScrolled(window.scrollY > 50);
+    window.addEventListener("scroll", fn, { passive: true });
+    return () => window.removeEventListener("scroll", fn);
+  }, []);
+
+  return (
+    <motion.nav
+      className={fontVars}
+      style={{
+        position: "fixed", top: 0, left: 0, right: 0, zIndex: 200,
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "20px clamp(20px,5vw,52px)",
+        transition: "background 0.5s, backdrop-filter 0.5s, border-color 0.5s",
+        background:     scrolled ? "rgba(5,5,8,0.84)" : "transparent",
+        backdropFilter: scrolled ? "blur(22px)"       : "none",
+        borderBottom:   scrolled
+          ? "1px solid rgba(255,255,255,0.05)"
+          : "1px solid transparent",
+      }}
+      initial={{ opacity: 0, y: -24 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.9, delay: 0.15, ease: EXPO }}
+    >
+      {/* Logo */}
+      <a
+        href="/"
+        style={{ ...FD, fontSize: 18, fontWeight: 700, letterSpacing: "-0.02em", color: "#f2ede3", textDecoration: "none", flexShrink: 0 }}
+      >
+        Aq<span style={{ color: "#c9a84c", fontStyle: "italic" }}>.</span>
+      </a>
+
+      {/* Centre links — CSS shows them at md+ */}
+      <ul
+        className="nav-links"
+        style={{
+          display: "none", alignItems: "center", gap: 28,
+          listStyle: "none", margin: 0, padding: 0,
+          position: "absolute", left: "50%", transform: "translateX(-50%)",
+        }}
+      >
+        {["Work","About","Research","Contact"].map((l) => (
+          <li key={l}>
+            <a
+              href={`#${l.toLowerCase()}`}
+              style={{ ...FB, fontSize: 11.5, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.30)", textDecoration: "none", transition: "color 0.2s" }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = "rgba(201,168,76,0.85)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = "rgba(255,255,255,0.30)"; }}
+            >{l}</a>
+          </li>
+        ))}
+      </ul>
+
+      {/* Right: only "Let's Talk" — badge is bottom-right now */}
+      <motion.a
+        href="#contact"
+        style={{
+          ...FB, fontSize: 11.5, letterSpacing: "0.06em", textDecoration: "none",
+          cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 8,
+          padding: "8px 20px", borderRadius: 100,
+          border: "1px solid rgba(201,168,76,0.22)",
+          color: "rgba(201,168,76,0.65)",
+          backdropFilter: "blur(12px)", flexShrink: 0,
+        }}
+        whileHover={{
+          borderColor: "rgba(201,168,76,0.68)",
+          color: "rgba(232,201,122,0.95)",
+          boxShadow: "0 0 22px rgba(201,168,76,0.22)",
+        }}
+        whileTap={{ scale: 0.97 }}
+        transition={{ duration: 0.18 }}
+      >
+        Let&apos;s Talk
+      </motion.a>
+    </motion.nav>
+  );
+}
+
+// ─── Available badge — BOTTOM-RIGHT, isolated from nav ───────────────────────
+function AvailBadge() {
+  return (
+    <motion.div
+      aria-label="Currently available for opportunities"
+      style={{
+        position: "fixed",
+        bottom: "clamp(20px,3vw,32px)",      // bottom-right: zero overlap with anything
+        right:  "clamp(20px,4vw,44px)",
+        zIndex: 201,                          // above nav (z-200), grain (z-50), everything
+        display: "inline-flex", alignItems: "center", gap: 8,
+        padding: "8px 16px", borderRadius: 100,
+        border: "1px solid rgba(74,222,128,0.22)",
+        background: "rgba(74,222,128,0.07)",
+        backdropFilter: "blur(14px)",
+      }}
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.9, delay: 2.5, ease: EXPO }}
+    >
+      <motion.span
+        style={{ width: 7, height: 7, borderRadius: "50%", background: "#4ade80", boxShadow: "0 0 8px #4ade80", flexShrink: 0 }}
+        animate={{ opacity: [1, 0.2, 1] }}
+        transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <span style={{ ...FB, fontSize: 11, letterSpacing: "0.04em", color: "rgba(187,247,208,0.72)", whiteSpace: "nowrap" }}>
+        Available for opportunities
+      </span>
+    </motion.div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 1 — HERO
+// ═══════════════════════════════════════════════════════════════════════════════
+function HeroSection() {
+  return (
+    <section
+      style={{
+        position: "relative", zIndex: 10,
+        minHeight: "100vh",
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+        padding: "clamp(120px,14vw,160px) clamp(20px,5vw,80px) clamp(80px,10vw,120px)",
+        textAlign: "center",
+      }}
+    >
+      {/* Eyebrow */}
+      <motion.div
+        style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, marginBottom: 36 }}
+        variants={fadeUp(0.3)} initial="hidden" animate="visible"
+      >
+        <span style={{ height: 1, width: 40, background: "rgba(201,168,76,0.38)" }} />
+        <span style={{ ...FB, fontSize: 10, letterSpacing: "0.40em", textTransform: "uppercase", color: "rgba(201,168,76,0.60)" }}>
+          Portfolio · MMXXVI
+        </span>
+        <svg width="7" height="7" viewBox="0 0 7 7" aria-hidden>
+          <polygon points="3.5,0 7,3.5 3.5,7 0,3.5" fill="rgba(201,168,76,0.50)" />
+        </svg>
+        <span style={{ ...FB, fontSize: 10, letterSpacing: "0.40em", textTransform: "uppercase", color: "rgba(201,168,76,0.60)" }}>
+          AI & Data Science
+        </span>
+        <span style={{ height: 1, width: 40, background: "rgba(201,168,76,0.38)" }} />
+      </motion.div>
+
+      {/* ── Headline ──
+          paddingBottom: 12 on every overflow wrapper → fixes descender clipping
+          (letters like g, j, p, q, y in Playfair Display are tall and clip
+           without extra bottom room when overflow:hidden is set)
+      */}
+      <div role="heading" aria-level={1} style={{ perspective: "1000px", marginBottom: 8 }}>
+
+        {/* Line 1: Aqilla. */}
+        <div style={{ overflow: "hidden", lineHeight: 0.92, marginBottom: 6, paddingBottom: 12 }}>
+          <motion.span
+            style={{
+              display: "block", ...FD,
+              fontSize: "clamp(60px,9.5vw,136px)", fontWeight: 900, fontStyle: "italic",
+              letterSpacing: "-0.03em", lineHeight: 0.92,
+              color: "rgba(242,237,227,0.96)",
+            }}
+            variants={wordReveal} initial="hidden" animate="visible" custom={0}
+          >
+            Aqilla.
+          </motion.span>
+        </div>
+
+        {/* Line 2: AI & Data Alchemist. */}
+        <div style={{ overflow: "hidden", lineHeight: 1.05, marginBottom: 4, paddingBottom: 12 }}>
+          <motion.span
+            style={{
+              display: "block", ...FD,
+              fontSize: "clamp(26px,4.0vw,58px)", fontWeight: 700,
+              letterSpacing: "-0.025em", lineHeight: 1.05,
+              color: "rgba(242,237,227,0.72)",
+            }}
+            variants={wordReveal} initial="hidden" animate="visible" custom={1}
+          >
+            AI &amp; Data Alchemist.
+          </motion.span>
+        </div>
+
+        {/* Line 3: Crafting the Digital Renaissance. */}
+        <div style={{ overflow: "hidden", display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "0 10px", lineHeight: 1.15, paddingBottom: 12 }}>
+          {["Crafting", "the"].map((word, i) => (
+            <motion.span
+              key={word}
+              style={{
+                display: "inline-block", ...FD,
+                fontSize: "clamp(20px,2.9vw,42px)", fontWeight: 400,
+                letterSpacing: "-0.015em", lineHeight: 1.15,
+                color: "rgba(242,237,227,0.44)",
+              }}
+              variants={wordReveal} initial="hidden" animate="visible" custom={2 + i}
+            >
+              {word}
+            </motion.span>
+          ))}
+          {/* Gold gradient on "Digital Renaissance." */}
+          <motion.span
+            style={{
+              display: "inline-block", ...FD,
+              fontSize: "clamp(20px,2.9vw,42px)", fontWeight: 700,
+              letterSpacing: "-0.015em", lineHeight: 1.15,
+              background: "linear-gradient(135deg,#c9a84c 0%,#e8c97a 30%,#f5e8c0 55%,#ffffff 80%,#e8c97a 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+              backgroundSize: "200% 200%",
+              animation: "goldShimmer 7s ease-in-out infinite",
+            }}
+            variants={wordReveal} initial="hidden" animate="visible" custom={4}
+          >
+            Digital&nbsp;Renaissance.
+          </motion.span>
+        </div>
+      </div>
+
+      {/* Ornament rule */}
+      <motion.div
+        style={{
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
+          margin: "28px auto", width: "min(300px,60vw)", transformOrigin: "center",
+        }}
+        variants={ornamentReveal} initial="hidden" animate="visible"
+      >
+        <span style={{ flex: 1, height: 1, background: "linear-gradient(90deg,transparent,rgba(201,168,76,0.52),transparent)" }} />
+        <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden>
+          <path d="M7 0 L8.5 5.5 L14 7 L8.5 8.5 L7 14 L5.5 8.5 L0 7 L5.5 5.5 Z" fill="rgba(201,168,76,0.58)" />
+        </svg>
+        <span style={{ flex: 1, height: 1, background: "linear-gradient(90deg,transparent,rgba(201,168,76,0.52),transparent)" }} />
+      </motion.div>
+
+      {/* Sub text */}
+      <motion.p
+        style={{
+          ...FB, fontSize: "clamp(13.5px,1.4vw,16.5px)", fontWeight: 300, lineHeight: 1.9,
+          color: "rgba(255,255,255,0.40)", maxWidth: 540, margin: "0 auto", textAlign: "center",
+        }}
+        variants={fadeUp(1.62)} initial="hidden" animate="visible"
+      >
+        Halo, saya{" "}
+        <span style={{ color: "rgba(242,237,227,0.82)", fontWeight: 400 }}>Aqilla</span>
+        {" "}— mahasiswa{" "}
+        <span style={{ color: "rgba(242,237,227,0.82)", fontWeight: 400 }}>Artificial Intelligence</span>
+        {" "}di{" "}
+        <span style={{ color: "rgba(242,237,227,0.78)", fontWeight: 400 }}>IPB University</span>
+        {" "}dan Data Analyst yang mengubah data kompleks menjadi strategi bisnis yang tajam.
+        Saat ini memimpin{" "}
+        <span style={{ ...FD, fontStyle: "italic", color: "rgba(242,237,227,0.80)" }}>Ceteris Paribus</span>
+        {" "}dalam berbagai inovasi.
+      </motion.p>
+
+      {/* CTA buttons */}
+      <motion.div
+        style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: 16, marginTop: 40 }}
+        variants={fadeUp(1.92)} initial="hidden" animate="visible"
+      >
+        {/* Primary */}
+        <motion.a
+          href="#work"
+          style={{
+            ...FB, position: "relative", display: "inline-flex", alignItems: "center", gap: 10,
+            padding: "15px 36px", borderRadius: 100,
+            background: "linear-gradient(135deg,#c9a84c 0%,#b8943c 100%)",
+            color: "#0a0800", fontSize: 13, fontWeight: 500, letterSpacing: "0.03em",
+            textDecoration: "none", cursor: "pointer", overflow: "hidden",
+          }}
+          whileHover={{ scale: 1.04, y: -3, boxShadow: "0 0 40px rgba(201,168,76,0.58),0 0 80px rgba(201,168,76,0.18),0 10px 32px rgba(201,168,76,0.38)" }}
+          whileTap={{ scale: 0.97, y: 0 }}
+          transition={{ type: "spring", stiffness: 340, damping: 24 }}
+        >
+          <motion.span
+            aria-hidden
+            style={{
+              position: "absolute", inset: 0, borderRadius: 100,
+              background: "linear-gradient(100deg,transparent 20%,rgba(255,255,255,0.28) 50%,transparent 80%)",
+              backgroundSize: "220% 100%", backgroundPosition: "180% 0",
+            }}
+            whileHover={{ backgroundPosition: "-80% 0" }}
+            transition={{ duration: 0.55 }}
+          />
+          <span style={{ position: "relative", zIndex: 1 }}>Explore Projects</span>
+          <svg style={{ position: "relative", zIndex: 1 }} width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+            <path d="M2 7H12M12 7L8 3M12 7L8 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </motion.a>
+
+        {/* Secondary */}
+        <motion.a
+          href="/resume.pdf"
+          target="_blank" rel="noopener noreferrer"
+          style={{
+            ...FB, display: "inline-flex", alignItems: "center", gap: 10,
+            padding: "14px 32px", borderRadius: 100,
+            border: "1px solid rgba(201,168,76,0.26)", backdropFilter: "blur(14px)",
+            color: "rgba(255,255,255,0.50)", fontSize: 13, fontWeight: 300, letterSpacing: "0.03em",
+            textDecoration: "none", cursor: "pointer",
+          }}
+          whileHover={{ scale: 1.03, y: -3, borderColor: "rgba(201,168,76,0.65)", color: "rgba(232,201,122,0.92)", boxShadow: "0 0 24px rgba(201,168,76,0.20)" }}
+          whileTap={{ scale: 0.97, y: 0 }}
+          transition={{ type: "spring", stiffness: 340, damping: 24 }}
+        >
+          View Resume
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
+            <path d="M2 10L10 2M10 2H4M10 2V8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </motion.a>
+      </motion.div>
+
+      {/* Scroll hint */}
+      <motion.div
+        style={{ position: "absolute", bottom: 36, left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1, delay: 2.7 }}
+      >
+        <div style={{ width: 20, height: 34, borderRadius: 100, border: "1px solid rgba(255,255,255,0.11)", display: "flex", alignItems: "flex-start", justifyContent: "center", paddingTop: 7 }}>
+          <motion.div
+            style={{ width: 3, height: 6, borderRadius: 100, background: "rgba(201,168,76,0.60)" }}
+            animate={{ y: [0, 12], opacity: [1, 0] }}
+            transition={{ duration: 1.7, repeat: Infinity, ease: "easeInOut" }}
+          />
+        </div>
+        <span style={{ ...FB, fontSize: 9, letterSpacing: "0.28em", textTransform: "uppercase", color: "rgba(255,255,255,0.24)" }}>Scroll</span>
+      </motion.div>
+
+      {/* Side stats — hidden mobile, shown md+ via CSS */}
+      <motion.div
+        className="side-stats"
+        style={{ position: "absolute", right: "clamp(24px,5vw,56px)", top: "50%", transform: "translateY(-50%)", display: "none", flexDirection: "column", gap: 28 }}
+        initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 1, delay: 2.4, ease: EXPO }}
+      >
+        {[["20+","Projects"],["3+","Years"],["AI","Focus"]].map(([num, label]) => (
+          <motion.div
+            key={label}
+            style={{ textAlign: "right", borderRight: "1px solid rgba(201,168,76,0.14)", paddingRight: 16 }}
+            whileHover={{ x: -3 }}
+            transition={{ type: "spring", stiffness: 220 }}
+          >
+            <span style={{
+              ...FD, display: "block", fontSize: 22, fontWeight: 700, lineHeight: 1,
+              background: "linear-gradient(135deg,#b8943c 0%,#e8c97a 40%,#f5dfa0 65%,#c9a84c 100%)",
+              WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+              backgroundClip: "text", backgroundSize: "200% 200%",
+              animation: "goldShimmer 7s ease-in-out infinite",
+            }}>{num}</span>
+            <span style={{ ...FB, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.12em", color: "rgba(255,255,255,0.24)" }}>{label}</span>
+          </motion.div>
+        ))}
+      </motion.div>
+    </section>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 2 — ABOUT SPACER
+// Camera arcs here while the orb drifts left.
+// Text anchors right so it doesn't compete with the orb.
+// ═══════════════════════════════════════════════════════════════════════════════
+function AboutSpacer() {
+  const ref    = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-20%" });
+
+  return (
+    <section
+      ref={ref}
+      id="about"
+      style={{
+        position: "relative", zIndex: 10,
+        minHeight: "60vh",
+        display: "flex", alignItems: "center", justifyContent: "flex-end",
+        padding: "60px clamp(32px,8vw,100px)",
+      }}
+    >
+      <motion.div
+        style={{ maxWidth: 420, textAlign: "left" }}
+        initial={{ opacity: 0, x: 40 }}
+        animate={inView ? { opacity: 1, x: 0 } : {}}
+        transition={{ duration: 1.1, ease: EXPO, delay: 0.2 }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+          <span style={{ height: 1, width: 28, background: "rgba(201,168,76,0.42)" }} />
+          <span style={{ ...FB, fontSize: 10, letterSpacing: "0.38em", textTransform: "uppercase", color: "rgba(201,168,76,0.58)" }}>About Me</span>
+        </div>
+
+        <h2 style={{ ...FD, fontSize: "clamp(30px,4.2vw,54px)", fontWeight: 700, lineHeight: 1.1, letterSpacing: "-0.02em", color: "rgba(242,237,227,0.90)", marginBottom: 18, paddingBottom: 8 }}>
+          Where Science<br />Meets <em>Craft.</em>
+        </h2>
+
+        <p style={{ ...FB, fontSize: "clamp(13.5px,1.4vw,16px)", lineHeight: 1.85, color: "rgba(255,255,255,0.45)", fontWeight: 300, marginBottom: 18 }}>
+          At <span style={{ color: "rgba(242,237,227,0.80)", fontWeight: 400 }}>IPB University</span> I sit at the intersection of rigorous data science and strategic storytelling. My work doesn&apos;t stop at the model — it ends when the insight drives a decision.
+        </p>
+
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {["Python","R","Machine Learning","NLP","Data Viz","SQL","Gen AI","Strategy"].map((s) => (
+            <span key={s} style={{
+              ...FB, fontSize: 11, letterSpacing: "0.05em",
+              padding: "5px 13px", borderRadius: 100,
+              border: "1px solid rgba(201,168,76,0.18)",
+              background: "rgba(201,168,76,0.06)", backdropFilter: "blur(8px)",
+              color: "rgba(201,168,76,0.68)",
+            }}>{s}</span>
+          ))}
+        </div>
+      </motion.div>
+    </section>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 3 — SELECTED WORKS
+// ═══════════════════════════════════════════════════════════════════════════════
+const PROJECTS = [
+  { num: "01", title: "Neural Market Oracle",      category: "Machine Learning · Finance",        desc: "Transformer predicting commodity movements with 87% directional accuracy across 15 years of Southeast Asian market data.", year: "2025", badge: "Featured", accent: "rgba(201,168,76," },
+  { num: "02", title: "Ceteris Paribus Dashboard", category: "Data Visualisation · Strategy",     desc: "Executive analytics platform translating econometric models into actionable C-suite intelligence.",                         year: "2025", badge: "Live",     accent: "rgba(109,40,217,"  },
+  { num: "03", title: "Lingua Nusantara NLP",      category: "Natural Language Processing",       desc: "Fine-tuned LLM pipeline for low-resource Indonesian regional languages — SOTA on Javanese and Sundanese corpora.",         year: "2024", badge: "Research", accent: "rgba(56,189,248,"  },
+  { num: "04", title: "Batik Pattern Generator",   category: "Generative AI · Cultural Heritage", desc: "Diffusion model trained on 4,000 traditional batik patterns, generating culturally-respectful designs at scale.",          year: "2024", badge: "AI Art",   accent: "rgba(251,146,60,"  },
+];
+
+function GlassCard({ p, i }: { p: typeof PROJECTS[0]; i: number }) {
+  const ref    = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-60px" });
+
+  function onMove(e: React.MouseEvent<HTMLDivElement>) {
+    const el = cardRef.current;
+    if (!el) return;
+    const r  = el.getBoundingClientRect();
+    const nx = (e.clientX - r.left) / r.width  - 0.5;
+    const ny = (e.clientY - r.top)  / r.height - 0.5;
+    el.style.transform = `perspective(900px) rotateX(${-ny * 10}deg) rotateY(${nx * 12}deg) scale(1.025)`;
+    const glare = el.querySelector<HTMLElement>(".card-glare");
+    if (glare) {
+      glare.style.background = `radial-gradient(circle at ${(nx + 0.5) * 100}% ${(ny + 0.5) * 100}%, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.03) 40%, transparent 65%)`;
+    }
+  }
+
+  function onLeave() {
+    const el = cardRef.current;
+    if (!el) return;
+    el.style.transform = "perspective(900px) rotateX(0) rotateY(0) scale(1)";
+    const glare = el.querySelector<HTMLElement>(".card-glare");
+    if (glare) glare.style.background = "none";
+  }
+
+  function onEnter() {
+    const el = cardRef.current;
+    if (!el) return;
+    el.style.borderColor = `${p.accent}0.40)`;
+    el.style.boxShadow   = `0 0 32px ${p.accent}0.12), 0 0 64px ${p.accent}0.06)`;
+  }
+
+  function onExit() {
+    const el = cardRef.current;
+    if (!el) return;
+    el.style.borderColor = "rgba(255,255,255,0.07)";
+    el.style.boxShadow   = "none";
+  }
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 32 }}
+      animate={inView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 1.0, delay: i * 0.10, ease: EXPO }}
+      style={{ display: "flex", height: "100%" }} // <--- Bikin wrapper luarnya 100% height
+    >
+      <div
+        ref={cardRef}
+        onMouseMove={onMove}
+        onMouseLeave={onLeave}
+        onMouseEnter={onEnter}
+        onMouseOut={onExit}
+        style={{
+          position: "relative", borderRadius: 20,
+          padding: "clamp(26px,3.5vw,38px)",
+          background: "rgba(12,12,20,0.22)",
+          backdropFilter: "blur(18px)",
+          WebkitBackdropFilter: "blur(18px)",
+          border: "1px solid rgba(255,255,255,0.07)",
+          cursor: "pointer", overflow: "hidden",
+          transformStyle: "preserve-3d" as const,
+          willChange: "transform",
+          transition: "transform 0.4s cubic-bezier(0.16,1,0.3,1), border-color 0.3s, box-shadow 0.3s",
+          // --- RAHASIA KARTU RAPI & SEJAJAR ADA DI SINI ---
+          display: "flex",
+          flexDirection: "column",
+          width: "100%",
+        }}
+      >
+        {/* Glare */}
+        <div className="card-glare" style={{ position: "absolute", inset: 0, borderRadius: 20, pointerEvents: "none", zIndex: 1 }} />
+        {/* Accent top line */}
+        <div aria-hidden style={{ position: "absolute", top: 0, left: "10%", right: "10%", height: 1, background: `linear-gradient(90deg,transparent,${p.accent}0.50),transparent)`, borderRadius: "0 0 4px 4px", pointerEvents: "none", zIndex: 2 }} />
+
+        {/* Content */}
+        <div style={{ position: "relative", zIndex: 3, display: "flex", flexDirection: "column", flexGrow: 1 }}>
+          {/* Meta row */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+            <span style={{ ...FD, fontSize: 11, letterSpacing: "0.18em", color: `${p.accent}0.36)`, fontStyle: "italic" }}>{p.num}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ ...FB, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.14em", color: "rgba(255,255,255,0.22)" }}>{p.year}</span>
+              <span style={{ ...FB, fontSize: 10, padding: "2px 10px", borderRadius: 100, border: `1px solid ${p.accent}0.28)`, color: `${p.accent}0.62)` }}>{p.badge}</span>
+            </div>
+          </div>
+
+          {/* Title */}
+          <h3
+            style={{ ...FD, fontSize: "clamp(17px,2vw,23px)", fontWeight: 700, color: "rgba(242,237,227,0.90)", lineHeight: 1.28, letterSpacing: "-0.01em", marginBottom: 8, transition: "color 0.3s" }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLHeadingElement).style.color = `${p.accent}0.90)`; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLHeadingElement).style.color = "rgba(242,237,227,0.90)"; }}
+          >{p.title}</h3>
+
+          {/* Category */}
+          <p style={{ ...FB, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.12em", color: `${p.accent}0.45)`, marginBottom: 14 }}>{p.category}</p>
+
+          {/* Description */}
+          <p style={{ ...FB, fontSize: 13, lineHeight: 1.78, color: "rgba(255,255,255,0.42)", fontWeight: 300 }}>{p.desc}</p>
+
+          {/* CTA */}
+          <div
+            style={{ 
+              display: "inline-flex", alignItems: "center", gap: 8, 
+              marginTop: "auto", // <--- INI YANG DORONG TOMBOL SELALU MENTOK KE BAWAH
+              paddingTop: 24, 
+              ...FB, fontSize: 12, letterSpacing: "0.06em", color: `${p.accent}0.42)`, borderBottom: `1px solid ${p.accent}0.20)`, paddingBottom: 1, cursor: "pointer", transition: "color 0.2s, border-color 0.2s" 
+            }}
+            onMouseEnter={(e) => { const t = e.currentTarget as HTMLDivElement; t.style.color = `${p.accent}0.85)`; t.style.borderBottomColor = `${p.accent}0.50)`; }}
+            onMouseLeave={(e) => { const t = e.currentTarget as HTMLDivElement; t.style.color = `${p.accent}0.42)`; t.style.borderBottomColor = `${p.accent}0.20)`; }}
+          >
+            View case study
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden>
+              <path d="M1 5.5H10M10 5.5L6.5 2M10 5.5L6.5 9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function WorksSection() {
+  const ref    = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-80px" });
+
+  return (
+    <section
+      id="work"
+      ref={ref}
+      style={{
+        position: "relative", zIndex: 10,
+        minHeight: "100vh",
+        // Near-transparent bg — glass orb shines through the cards
+        background: "linear-gradient(180deg,rgba(5,5,8,0.12) 0%,rgba(5,5,8,0.28) 40%,rgba(5,5,8,0.14) 100%)",
+        padding: "clamp(72px,9vw,116px) clamp(24px,5vw,56px)",
+      }}
+    >
+      {/* Header */}
+      <motion.div
+        style={{ textAlign: "center", marginBottom: 60 }}
+        initial={{ opacity: 0, y: 28 }}
+        animate={inView ? { opacity: 1, y: 0 } : {}}
+        transition={{ duration: 1.0, ease: EXPO }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, marginBottom: 16 }}>
+          <span style={{ height: 1, width: 48, background: "rgba(201,168,76,0.35)" }} />
+          <span style={{ ...FB, fontSize: 10, letterSpacing: "0.42em", textTransform: "uppercase", color: "rgba(201,168,76,0.55)" }}>Selected Works</span>
+          <span style={{ height: 1, width: 48, background: "rgba(201,168,76,0.35)" }} />
+        </div>
+        <h2 style={{
+          ...FD, fontSize: "clamp(36px,5.5vw,72px)", fontWeight: 700,
+          letterSpacing: "-0.022em", lineHeight: 1.08, paddingBottom: 8,
+          background: "linear-gradient(135deg,rgba(242,237,227,0.95) 0%,rgba(201,168,76,0.80) 55%,rgba(232,201,122,0.90) 100%)",
+          WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+        }}>
+          The Atelier
+        </h2>
+        <p style={{ ...FB, marginTop: 12, fontSize: 13.5, color: "rgba(255,255,255,0.34)", maxWidth: 300, margin: "12px auto 0", lineHeight: 1.75 }}>
+          Where data science meets the craft of the old masters.
+        </p>
+      </motion.div>
+
+      {/* Cards */}
+      <div style={{ maxWidth: 960, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,440px),1fr))", gap: 20 }}>
+        {PROJECTS.map((p, i) => <GlassCard key={p.num} p={p} i={i} />)}
+      </div>
+
+      {/* Archive link */}
+      <motion.div
+        style={{ marginTop: 56, display: "flex", justifyContent: "center" }}
+        initial={{ opacity: 0 }} animate={inView ? { opacity: 1 } : {}}
+        transition={{ duration: 0.9, delay: 0.45 }}
+      >
+        <motion.a
+          href="#all-work"
+          style={{ ...FB, display: "inline-flex", alignItems: "center", gap: 12, fontSize: 12.5, letterSpacing: "0.05em", color: "rgba(201,168,76,0.44)", borderBottom: "1px solid rgba(201,168,76,0.18)", paddingBottom: 2, textDecoration: "none", cursor: "pointer" }}
+          whileHover={{ y: -1 }}
+          transition={{ duration: 0.2 }}
+          onHoverStart={(e) => { const t = e.target as HTMLAnchorElement; t.style.color = "rgba(201,168,76,0.85)"; t.style.borderBottomColor = "rgba(201,168,76,0.55)"; }}
+          onHoverEnd={(e) => { const t = e.target as HTMLAnchorElement; t.style.color = "rgba(201,168,76,0.44)"; t.style.borderBottomColor = "rgba(201,168,76,0.18)"; }}
+        >
+          View complete archive
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden>
+            <path d="M1 5.5H10M10 5.5L6.5 2M10 5.5L6.5 9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </motion.a>
+      </motion.div>
+    </section>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 4 — CONTACT
+// ═══════════════════════════════════════════════════════════════════════════════
+function ContactSection() {
+  const ref    = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-100px" });
+
+  return (
+    <section
+      id="contact"
+      ref={ref}
+      style={{
+        position: "relative", zIndex: 10,
+        minHeight: "100vh",
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+        padding: "80px clamp(20px,5vw,80px)",
+        textAlign: "center",
+      }}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 32 }}
+        animate={inView ? { opacity: 1, y: 0 } : {}}
+        transition={{ duration: 1.1, ease: EXPO }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginBottom: 28 }}>
+          <span style={{ height: 1, width: 36, background: "rgba(201,168,76,0.40)" }} />
+          <span style={{ ...FB, fontSize: 10, letterSpacing: "0.38em", textTransform: "uppercase", color: "rgba(201,168,76,0.58)" }}>Let&apos;s Connect</span>
+          <span style={{ height: 1, width: 36, background: "rgba(201,168,76,0.40)" }} />
+        </div>
+
+        <h2 style={{ ...FD, fontSize: "clamp(40px,6vw,88px)", fontWeight: 700, fontStyle: "italic", lineHeight: 1.0, letterSpacing: "-0.03em", color: "rgba(242,237,227,0.94)", marginBottom: 10, paddingBottom: 8 }}>
+          Let&apos;s Build
+        </h2>
+        <h2 style={{ ...FD, fontSize: "clamp(40px,6vw,88px)", fontWeight: 700, lineHeight: 1.0, letterSpacing: "-0.03em", marginBottom: 32, paddingBottom: 8 }}>
+          <span style={{
+            background: "linear-gradient(135deg,#c9a84c 0%,#e8c97a 30%,#f5e8c0 55%,#ffffff 80%,#e8c97a 100%)",
+            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+            backgroundClip: "text", backgroundSize: "200% 200%",
+            animation: "goldShimmer 7s ease-in-out infinite",
+          }}>
+            Something Remarkable.
+          </span>
+        </h2>
+
+        <p style={{ ...FB, fontSize: "clamp(14px,1.5vw,17px)", lineHeight: 1.85, color: "rgba(255,255,255,0.42)", maxWidth: 480, margin: "0 auto 48px", fontWeight: 300 }}>
+          Open to data science roles, AI research collaborations, and strategic consulting. Let&apos;s turn your data into decisions.
+        </p>
+
+        <motion.a
+          href="mailto:aqilla@example.com"
+          style={{
+            ...FB, position: "relative", display: "inline-flex", alignItems: "center", gap: 12,
+            padding: "18px 44px", borderRadius: 100,
+            background: "linear-gradient(135deg,#c9a84c 0%,#b8943c 100%)",
+            color: "#0a0800", fontSize: 14, fontWeight: 500, letterSpacing: "0.04em",
+            textDecoration: "none", cursor: "pointer", overflow: "hidden",
+          }}
+          whileHover={{ scale: 1.04, y: -3, boxShadow: "0 0 50px rgba(201,168,76,0.60),0 0 100px rgba(201,168,76,0.20)" }}
+          whileTap={{ scale: 0.97 }}
+          transition={{ type: "spring", stiffness: 340, damping: 24 }}
+        >
+          <motion.span
+            aria-hidden
+            style={{
+              position: "absolute", inset: 0, borderRadius: 100,
+              background: "linear-gradient(100deg,transparent 20%,rgba(255,255,255,0.26) 50%,transparent 80%)",
+              backgroundSize: "220% 100%", backgroundPosition: "180% 0",
+            }}
+            whileHover={{ backgroundPosition: "-80% 0" }}
+            transition={{ duration: 0.55 }}
+          />
+          <span style={{ position: "relative", zIndex: 1 }}>Get In Touch</span>
+          <svg style={{ position: "relative", zIndex: 1 }} width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+            <path d="M2 8H14M14 8L9 3M14 8L9 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </motion.a>
+      </motion.div>
+
+      {/* Footer */}
+      <div style={{ position: "absolute", bottom: 40, left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 24 }}>
+        <span style={{ height: 1, width: 56, background: "rgba(255,255,255,0.08)" }} />
+        <span style={{ ...FD, fontSize: 12, letterSpacing: "0.06em", color: "rgba(255,255,255,0.20)", fontStyle: "italic" }}>
+          Aqilla · {new Date().getFullYear()}
+        </span>
+        <span style={{ height: 1, width: 56, background: "rgba(255,255,255,0.08)" }} />
+      </div>
+    </section>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ROOT PAGE
+// ═══════════════════════════════════════════════════════════════════════════════
+export default function Page() {
+  const fontVars = `${playfair.variable} ${inter.variable}`;
+
+  // scrollYProgress: 0 at top, 1 at very bottom of the page
+  // Measured against the full document (default target)
+  const { scrollYProgress } = useScroll();
+
+  return (
+    <>
+      <style>{`
+        @keyframes goldShimmer {
+          0%,100% { background-position: 0% 50%; }
+          50%      { background-position: 100% 50%; }
+        }
+        @media (min-width: 768px) {
+          .nav-links  { display: flex !important; }
+          .side-stats { display: flex !important; }
+        }
+      `}</style>
+
+      {/*
+        ROOT <main>:
+        ✓ overflow-x-hidden  → clips horizontal aurora bleed
+        ✗ NOT overflow-hidden → would kill vertical scrolling
+        ✓ min-height: 100vh  → page is always at least one viewport tall
+      */}
+      <main
+        className={fontVars}
+        style={{
+          position: "relative",
+          width: "100%",
+          overflowX: "hidden",
+          minHeight: "100vh",
+          background: "#050508",
+          color: "#f2ede3",
+        }}
+      >
+        {/* ── z-0  3D Canvas — fixed, pointer-events-none, never blocks scroll ── */}
+        <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }} aria-hidden>
+          <HeroCanvas scrollYProgress={scrollYProgress} />
+        </div>
+
+        {/* ── Fixed background layers ── */}
+        <AuroraWash />   {/* z-1  */}
+        <Vignette />     {/* z-2  */}
+        <CursorGlow />   {/* z-4  */}
+        <Grain />        {/* z-50 */}
+
+        {/* ── Fixed chrome ── */}
+        <Nav fontVars={fontVars} />   {/* z-200 */}
+        <AvailBadge />                {/* z-201 bottom-right */}
+
+        {/* ══════════════════════════════════════════════════
+            SCROLLABLE HTML — 4 clear sections, all z-10
+            The fixed canvas camera reads scrollYProgress
+            and animates in sync with what the user sees here.
+        ══════════════════════════════════════════════════ */}
+        <div style={{ position: "relative", zIndex: 10 }}>
+          <HeroSection />      {/* min-h-screen   camera rest      */}
+          <AboutSpacer />      {/* min-h-[60vh]   camera arcs      */}
+          <WorksSection />     {/* min-h-screen   camera pushes in */}
+          <ContactSection />   {/* min-h-screen   camera pulls back*/}
+        </div>
+
+        {/* ── z-9999  Star trail cursor — always on top, never blocks input ── */}
+        <StarCursor />
+      </main>
+    </>
+  );
+}

@@ -1,0 +1,83 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;0,900;1,400;1,700&family=Inter:wght@300;400;500&display=swap');
+@import "tailwindcss";
+
+/* ─── Design Tokens ─────────────────────────────────────────────────────────── */
+:root {
+  --ink:         #0c0a07;
+  --parchment:   #f2ede3;
+  --gold:        #c9a84c;
+  --gold-light:  #e8c97a;
+  --gold-glow:   rgba(201, 168, 76, 0.3);
+  --crimson:     #6b1a1a;
+  --cobalt:      #1a2a4a;
+  --marble:      #e8e4dc;
+  --umber:       #3d2b1f;
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body:    'Inter', system-ui, sans-serif;
+}
+
+/* ─── Base ───────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  background-color: var(--ink);
+  color: var(--parchment);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* ─── Grain / Noise overlay — analog texture ────────────────────────────────── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.042;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 180px;
+  mix-blend-mode: overlay;
+}
+
+/* ─── Scrollbar ──────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: var(--ink); }
+::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 99px; }
+
+/* ─── Selection ─────────────────────────────────────────────────────────────── */
+::selection { background: rgba(201,168,76,0.25); color: var(--gold-light); }
+
+/* ─── Gold shimmer gradient text ────────────────────────────────────────────── */
+.text-gold-gradient {
+  background: linear-gradient(135deg, #b8943c 0%, var(--gold-light) 35%, #f5dfa0 60%, var(--gold) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  background-size: 200% 200%;
+  animation: goldShimmer 7s ease-in-out infinite;
+}
+@keyframes goldShimmer {
+  0%,100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+
+/* ─── Marble text ───────────────────────────────────────────────────────────── */
+.text-marble {
+  background: linear-gradient(120deg, #fff 0%, #e8e4dc 40%, #ccc8c0 70%, #f0ece4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Ornamental divider ────────────────────────────────────────────────────── */
+.ornament-rule {
+  display: flex; align-items: center; gap: 10px; color: var(--gold);
+}
+.ornament-rule::before, .ornament-rule::after {
+  content: ''; flex: 1; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
