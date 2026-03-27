@@ -152,7 +152,7 @@ function Nav({ fontVars }: { fontVars: string }) {
         display:"flex", alignItems:"center", justifyContent:"space-between",
         padding:"16px clamp(20px,5vw,52px)", // Padding disunat dikit biar lebih sleek
         transition:"background 0.5s, backdrop-filter 0.5s, border-color 0.5s",
-        background:     scrolled ? "rgba(5, 5, 8, 0.45)" : "transparent", // Transparansi dinaikin (0.84 -> 0.45)
+        background:     scrolled ? "rgba(5, 5, 8, 0.25)" : "transparent", // Transparansi dinaikin (0.84 -> 0.45)
         backdropFilter: scrolled ? "blur(16px)"       : "none", // Blur dikecilin dikit biar makin tembus
         borderBottom:   scrolled ? "1px solid rgba(255,255,255,0.05)" : "1px solid transparent",
       }}
