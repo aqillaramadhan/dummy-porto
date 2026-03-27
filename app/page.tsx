@@ -18,7 +18,11 @@
  *   ④ CursorGlow now reacts stronger in Works/Contact (scales up slightly)
  */
 
-import dynamic    from "next/dynamic";
+// Di baris paling atas, bareng import lain
+import dynamic from 'next/dynamic'; // Use dynamic import for component containing audio
+
+// Import the new AudioPlayer component
+const AudioPlayer = dynamic(() => import('./components/AudioPlayer'), { ssr: false });
 import { useRef, useEffect, useState } from "react";
 import { Playfair_Display, Inter } from "next/font/google";
 import StarCursor from "./StarCursor";   // adjust path if needed
@@ -681,6 +685,7 @@ export default function Page() {
         </div>
 
         <StarCursor />
+        <AudioPlayer />
       </main>
     </>
   );
