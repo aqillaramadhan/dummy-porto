@@ -152,7 +152,7 @@ function DataCrystal({ scrollYProgress }: SceneProps) {
             chromaticAberration={0.08} distortionScale={0.40} temporalDistortion={0.10}
             color="#e0d8f8" attenuationColor="#c9a84c" attenuationDistance={0.8}
             iridescence={0.9} iridescenceIOR={1.5} iridescenceThicknessRange={[100, 800]}
-            envMapIntensity={3.2} samples={12} resolution={512} background={new THREE.Color("#050508")}
+            envMapIntensity={3.2} samples={6} resolution={256} background={new THREE.Color("#050508")}
           />
         </IcosahedronFX>
       </FloatFX>
@@ -302,7 +302,7 @@ function PostFX({ scrollYProgress }: SceneProps) {
   });
 
   return (
-    <EffectComposerFX multisampling={4} disableNormalPass>
+    <EffectComposerFX multisampling={0} disableNormalPass>
       <BloomFX luminanceThreshold={0.18} luminanceSmoothing={0.08} intensity={1.6} mipmapBlur />
       <ChromaticAberrationFX blendFunction={BlendFunction.NORMAL} offset={caOffset.current} radialModulation={false} modulationOffset={0} />
       <NoiseFX opacity={0.028} blendFunction={BlendFunction.ADD} />
@@ -316,7 +316,7 @@ export default function HeroCanvas({ scrollYProgress }: SceneProps) {
     <Canvas
       camera={{ position: [0, 0, 5], fov: 48 }}
       gl={{ antialias: true, alpha: true, powerPreference: "high-performance", toneMapping: THREE.NoToneMapping, stencil: false, depth: true }}
-      dpr={[1, 1.8]}
+      dpr={[1, 1.2]}
       shadows={false}
       style={{ position: "fixed", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}
     >

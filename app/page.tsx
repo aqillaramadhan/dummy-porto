@@ -659,15 +659,14 @@ function GlassCard({ p, i }: { p: typeof PROJECTS[0]; i: number }) {
         style={{
           position: "relative", borderRadius: 20,
           padding: "clamp(26px,3.5vw,38px)",
-          background: "rgba(12,12,20,0.22)",
-          backdropFilter: "blur(18px)",
-          WebkitBackdropFilter: "blur(18px)",
+          background: "rgba(12,12,20,0.65)", // Background lebih pekat (naik dari 0.22 ke 0.65)
+          backdropFilter: "blur(4px)",       // Blur diturunin drastis dari 18px ke 4px
+          WebkitBackdropFilter: "blur(4px)",
           border: "1px solid rgba(255,255,255,0.07)",
           cursor: "pointer", overflow: "hidden",
           transformStyle: "preserve-3d" as const,
           willChange: "transform",
           transition: "transform 0.4s cubic-bezier(0.16,1,0.3,1), border-color 0.3s, box-shadow 0.3s",
-          // --- RAHASIA KARTU RAPI & SEJAJAR ADA DI SINI ---
           display: "flex",
           flexDirection: "column",
           width: "100%",
