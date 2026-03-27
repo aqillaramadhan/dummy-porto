@@ -102,7 +102,7 @@ function DistantPlanet({ pos, radius, color, emissive, rotSpeed }: {
   });
   return (
     <mesh ref={ref} position={pos}>
-      <icosahedronGeometry args={[radius, 0]} />
+      <icosahedronGeometry args={[radius, 1]} />
       <meshStandardMaterial color={color} emissive={emissive} emissiveIntensity={0.35}
         roughness={0.75} metalness={0.15} flatShading />
     </mesh>

@@ -538,16 +538,21 @@ function WorksSection() {
 }
 
 /** Animated horizontal warp-line at the Works/Contact boundary */
+/** Animated horizontal warp-line at the Works/Contact boundary */
 function WarpTransition() {
   const ref    = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once:false, margin:"-5%" });
+  const inView = useInView(ref, { once:false, margin:"-15%" }); // Margin diubah biar trigger-nya pas di tengah layar
 
   return (
-    <div ref={ref} style={{ position:"relative", height:80, marginTop:60, overflow:"hidden" }}>
+    <div ref={ref} style={{ position:"relative", height:120, marginTop:100, marginBottom:40, overflow:"hidden", display: "flex", alignItems: "center", justifyContent: "center" }}> 
+      {/* Tinggi div ditambah, marginTop ditambah, marginBottom ditambah biar ada ruang napas.
+        Ditambah flexbox centering biar garis dan teks PASTI di tengah.
+      */}
+
       {/* Centre line */}
       <motion.div
         style={{
-          position:"absolute", top:"50%", left:0, right:0, height:1,
+          position:"absolute", left:0, right:0, height:1,
           background:"linear-gradient(90deg, transparent 0%, rgba(201,168,76,0.0) 0%, rgba(201,168,76,0.6) 30%, rgba(255,255,255,0.9) 50%, rgba(201,168,76,0.6) 70%, rgba(201,168,76,0.0) 100%)",
           transformOrigin:"center",
         }}
@@ -555,24 +560,26 @@ function WarpTransition() {
         animate={inView ? { scaleX:1, opacity:1 } : { scaleX:0, opacity:0 }}
         transition={{ duration:1.2, ease:[0.16,1,0.3,1] }}
       />
-      {/* "DATA STREAM" label at centre */}
+
+      {/* "ATELIER CONNECTION" label exactly at centre */}
       <motion.div
-        style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", background:"rgba(5,5,8,0.95)", padding:"4px 12px", border:"1px solid rgba(201,168,76,0.30)" }}
-        initial={{ opacity:0, y:4 }}
-        animate={inView ? { opacity:1, y:0 } : { opacity:0, y:4 }}
-        transition={{ duration:0.5, delay:0.6 }}
+        style={{ position:"relative", background:"rgba(5,5,8,0.95)", padding:"6px 16px", border:"1px solid rgba(201,168,76,0.30)", borderRadius: 4, zIndex: 2 }} // Pake relative, buang transform translate
+        initial={{ opacity:0, y:10 }} // Animasi y diperhalus
+        animate={inView ? { opacity:1, y:0 } : { opacity:0, y:10 }}
+        transition={{ duration:0.6, delay:0.4 }} // Delay dicepetin dikit
       >
-        <span style={{ ...FB, fontSize:8, letterSpacing:"0.3em", textTransform:"uppercase", color:"rgba(201,168,76,0.70)" }}>
-          ∞ DATA STREAM ∞
+        <span style={{ ...FB, fontSize:9, letterSpacing:"0.3em", textTransform:"uppercase", color:"rgba(201,168,76,0.85)", fontWeight: 500 }}>
+          ∞ INITIALIZING ATELIER CONNECTION ∞
         </span>
       </motion.div>
+
       {/* Ping dots left & right */}
       {[-1,1].map((dir) => (
         <motion.div
           key={dir}
-          style={{ position:"absolute", top:"50%", left:"50%", width:6, height:6, borderRadius:"50%", background:"#c9a84c", boxShadow:"0 0 10px #c9a84c", marginTop:-3, marginLeft:-3 }}
-          animate={inView ? { x: dir * 300, opacity:[1,1,0] } : { x:0, opacity:0 }}
-          transition={{ duration:1.0, delay:0.7, ease:"easeOut" }}
+          style={{ position:"absolute", top:"50%", left:"50%", width:6, height:6, borderRadius:"50%", background:"#c9a84c", boxShadow:"0 0 12px #c9a84c", marginTop:-3, marginLeft:-3, zIndex: 1 }}
+          animate={inView ? { x: dir * window.innerWidth * 0.4, opacity:[1,1,0] } : { x:0, opacity:0 }} // Pake innerWidth biar terbangnya pas sampai ujung layar
+          transition={{ duration:1.2, delay:0.5, ease:"easeOut" }}
         />
       ))}
     </div>
