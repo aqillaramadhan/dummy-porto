@@ -596,10 +596,10 @@ function AboutSpacer() {
 // SECTION 3 — SELECTED WORKS
 // ═══════════════════════════════════════════════════════════════════════════════
 const PROJECTS = [
-  { num: "01", title: "Neural Market Oracle",      category: "Machine Learning · Finance",        desc: "Transformer predicting commodity movements with 87% directional accuracy across 15 years of Southeast Asian market data.", year: "2025", badge: "Featured", accent: "rgba(201,168,76," },
-  { num: "02", title: "Ceteris Paribus Dashboard", category: "Data Visualisation · Strategy",     desc: "Executive analytics platform translating econometric models into actionable C-suite intelligence.",                         year: "2025", badge: "Live",     accent: "rgba(109,40,217,"  },
-  { num: "03", title: "Lingua Nusantara NLP",      category: "Natural Language Processing",       desc: "Fine-tuned LLM pipeline for low-resource Indonesian regional languages — SOTA on Javanese and Sundanese corpora.",         year: "2024", badge: "Research", accent: "rgba(56,189,248,"  },
-  { num: "04", title: "Batik Pattern Generator",   category: "Generative AI · Cultural Heritage", desc: "Diffusion model trained on 4,000 traditional batik patterns, generating culturally-respectful designs at scale.",          year: "2024", badge: "AI Art",   accent: "rgba(251,146,60,"  },
+  { num: "01", title: "Startup Success Predictor", category: "Machine Learning · Finance",        desc: "End-to-end predictive model utilizing Random Forest to analyze historical Crunchbase data, determining startup operational viability.", year: "2026", badge: "Featured", accent: "rgba(201,168,76,", link: "https://startup-success-predictor-3dappaj7fgdm3z9zbtm7ien.streamlit.app/" },
+  { num: "02", title: "Academic Command Center",   category: "Data Visualisation · Dashboard",    desc: "Executive analytics platform built with Streamlit and Plotly, designed for real-time monitoring of student performance metrics.",     year: "2026", badge: "Live",     accent: "rgba(109,40,217,", link: "https://acad-command-center-2kzh2hkkkxmertqhchagb6.streamlit.app/"  },
+  { num: "03", title: "TikTok & Procrastination",  category: "Statistical Analysis",              desc: "Quantitative research proposal investigating the correlation between social media consumption duration and academic procrastination.",  year: "2026", badge: "Research", accent: "rgba(56,189,248,", link: "https://docs.google.com/document/d/17Nxi5iDHAAxyhEDn6FSbuEHiWO1U4jzO/edit?usp=sharing&ouid=113828037901189914468&rtpof=true&sd=true"  },
+  { num: "04", title: "Nanobubble Infographic",    category: "General Chemistry · Design",        desc: "Educational infographic detailing the application of nanobubble technology in the fisheries industry, translating complex concepts.", year: "2026", badge: "Design",   accent: "rgba(251,146,60,", link: "https://docs.google.com/document/d/17Nxi5iDHAAxyhEDn6FSbuEHiWO1U4jzO/edit?usp=sharing&ouid=113828037901189914468&rtpof=true&sd=true"  },
 ];
 
 function GlassCard({ p, i }: { p: typeof PROJECTS[0]; i: number }) {
@@ -703,21 +703,25 @@ function GlassCard({ p, i }: { p: typeof PROJECTS[0]; i: number }) {
           <p style={{ ...FB, fontSize: 13, lineHeight: 1.78, color: "rgba(255,255,255,0.42)", fontWeight: 300 }}>{p.desc}</p>
 
           {/* CTA */}
-          <div
+          <a
+            href={p.link}
+            target="_blank"
+            rel="noopener noreferrer"
             style={{ 
               display: "inline-flex", alignItems: "center", gap: 8, 
-              marginTop: "auto", // <--- INI YANG DORONG TOMBOL SELALU MENTOK KE BAWAH
+              marginTop: "auto", 
               paddingTop: 24, 
+              textDecoration: "none",
               ...FB, fontSize: 12, letterSpacing: "0.06em", color: `${p.accent}0.42)`, borderBottom: `1px solid ${p.accent}0.20)`, paddingBottom: 1, cursor: "pointer", transition: "color 0.2s, border-color 0.2s" 
             }}
-            onMouseEnter={(e) => { const t = e.currentTarget as HTMLDivElement; t.style.color = `${p.accent}0.85)`; t.style.borderBottomColor = `${p.accent}0.50)`; }}
-            onMouseLeave={(e) => { const t = e.currentTarget as HTMLDivElement; t.style.color = `${p.accent}0.42)`; t.style.borderBottomColor = `${p.accent}0.20)`; }}
+            onMouseEnter={(e) => { const t = e.currentTarget as HTMLAnchorElement; t.style.color = `${p.accent}0.85)`; t.style.borderBottomColor = `${p.accent}0.50)`; }}
+            onMouseLeave={(e) => { const t = e.currentTarget as HTMLAnchorElement; t.style.color = `${p.accent}0.42)`; t.style.borderBottomColor = `${p.accent}0.20)`; }}
           >
-            View case study
+            View project
             <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden>
               <path d="M1 5.5H10M10 5.5L6.5 2M10 5.5L6.5 9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-          </div>
+          </a>
         </div>
       </div>
     </motion.div>
