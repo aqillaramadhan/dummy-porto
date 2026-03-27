@@ -7,7 +7,7 @@ const FM = { fontFamily: "'Space Mono', monospace" };
 
 // A PREMIUM PUBLIC DOMAIN INSTRUMENTAL TRACK (Classic/Orchestral Renaissance vibe)
 // You can replace this URL with your own .mp3 file later!
-const AUDIO_SOURCE = "c:\Users\aqill\Downloads\The_Alchemist_s_Waltz.mp3"; 
+const AUDIO_SOURCE = "/lagu-epic.mp3";
 
 export default function AudioPlayer() {
   const audioRef = useRef<HTMLAudioElement>(null);
