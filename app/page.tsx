@@ -150,10 +150,10 @@ function Nav({ fontVars }: { fontVars: string }) {
       style={{
         position:"fixed", top:0, left:0, right:0, zIndex:200,
         display:"flex", alignItems:"center", justifyContent:"space-between",
-        padding:"20px clamp(20px,5vw,52px)",
+        padding:"16px clamp(20px,5vw,52px)", // Padding disunat dikit biar lebih sleek
         transition:"background 0.5s, backdrop-filter 0.5s, border-color 0.5s",
-        background:     scrolled ? "rgba(5,5,8,0.84)" : "transparent",
-        backdropFilter: scrolled ? "blur(22px)"       : "none",
+        background:     scrolled ? "rgba(5, 5, 8, 0.45)" : "transparent", // Transparansi dinaikin (0.84 -> 0.45)
+        backdropFilter: scrolled ? "blur(16px)"       : "none", // Blur dikecilin dikit biar makin tembus
         borderBottom:   scrolled ? "1px solid rgba(255,255,255,0.05)" : "1px solid transparent",
       }}
       initial={{ opacity:0, y:-24 }} animate={{ opacity:1, y:0 }}
@@ -612,7 +612,9 @@ function ContactSection() {
           Open to data science roles, AI research collaborations, and strategic consulting. Let&apos;s turn your data into decisions.
         </p>
         <motion.a
-          href="mailto:aqilla@example.com"
+          href="https://wa.me/6281223932663" // Link WA asli lu dimasukin sini
+          target="_blank" // Biar ngebuka di tab baru
+          rel="noopener noreferrer"
           style={{ ...FB, position:"relative", display:"inline-flex", alignItems:"center", gap:12, padding:"18px 44px", borderRadius:100, background:"linear-gradient(135deg,#c9a84c 0%,#b8943c 100%)", color:"#0a0800", fontSize:14, fontWeight:500, letterSpacing:"0.04em", textDecoration:"none", cursor:"pointer", overflow:"hidden" }}
           whileHover={{ scale:1.04, y:-3, boxShadow:"0 0 50px rgba(201,168,76,0.60),0 0 100px rgba(201,168,76,0.20)" }}
           whileTap={{ scale:0.97 }} transition={{ type:"spring", stiffness:340, damping:24 }}
